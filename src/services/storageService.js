@@ -3,7 +3,8 @@ const STORAGE_KEY = "bolao-livia-camila-2026";
 const defaultState = {
   rounds: [],
   lastUpdatedAt: null,
-  apiStatus: "Ainda não atualizado"
+  apiStatus: "Ainda não atualizado",
+  syncStatus: "Nuvem não configurada"
 };
 
 export function loadState() {

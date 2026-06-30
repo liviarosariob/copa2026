@@ -135,7 +135,9 @@ Quando você clica em **Atualizar agora**, o app busca os jogos nas datas das ro
 
 ## Armazenamento
 
-Os dados ficam salvos no navegador usando `localStorage`.
+Os dados ficam salvos no Supabase quando ele estiver configurado.
+
+O navegador também mantém um cache local com `localStorage`, para o app continuar abrindo mesmo se a internet falhar.
 
 Chave usada:
 
@@ -145,13 +147,70 @@ bolao-livia-camila-2026
 
 Isso significa:
 
-- continua salvo ao fechar e abrir o navegador;
-- funciona no celular;
-- não salva nada no GitHub;
-- se limpar os dados do navegador, apaga;
-- outro aparelho começa vazio.
+- celular, PC e outros navegadores passam a ver o mesmo bolão;
+- ao importar ou atualizar resultados, o app salva na nuvem;
+- se a internet cair, o último estado ainda abre pelo cache local.
 
 Use **Exportar dados** para baixar backup em JSON.
+
+## Configurar Supabase
+
+Crie um projeto no Supabase e rode este SQL no **SQL Editor**:
+
+```sql
+create table if not exists public.bolao_state (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.bolao_state enable row level security;
+
+drop policy if exists "bolao public read" on public.bolao_state;
+drop policy if exists "bolao public insert" on public.bolao_state;
+drop policy if exists "bolao public update" on public.bolao_state;
+
+create policy "bolao public read"
+on public.bolao_state
+for select
+using (true);
+
+create policy "bolao public insert"
+on public.bolao_state
+for insert
+with check (id = 'principal');
+
+create policy "bolao public update"
+on public.bolao_state
+for update
+using (id = 'principal')
+with check (id = 'principal');
+```
+
+Depois copie no Supabase:
+
+- **Project URL**
+- **anon public key**
+
+E cole em:
+
+```text
+src/services/supabaseConfig.js
+```
+
+Exemplo:
+
+```js
+export const SUPABASE_URL = "https://xxxx.supabase.co";
+export const SUPABASE_ANON_KEY = "sua_anon_key";
+```
+
+O app salva tudo em uma única linha:
+
+```text
+tabela: bolao_state
+id: principal
+```
 
 ## Modo Print
 

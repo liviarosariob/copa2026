@@ -1,11 +1,62 @@
 import { calculateTournament } from "./services/scoringService.js";
 import { buildExportPayload, importRound } from "./services/importExportService.js";
 import { loadState, saveState } from "./services/storageService.js";
+import { isSupabaseConfigured, loadRemoteState, saveRemoteState } from "./services/supabaseService.js";
 import { updateResults } from "./services/footballResultsService.js";
 import { findCountry } from "./services/countries.js";
 
 const app = document.querySelector("#app");
 const state = { ...loadState(), view: location.hash === "#print" ? "print" : "dashboard", errors: [], showImport: false, importText: "" };
+
+function persistedState() {
+  return {
+    rounds: state.rounds,
+    lastUpdatedAt: state.lastUpdatedAt,
+    apiStatus: state.apiStatus
+  };
+}
+
+async function persistState() {
+  saveState(persistedState());
+
+  if (!isSupabaseConfigured()) {
+    state.syncStatus = "Supabase não configurado";
+    saveState(persistedState());
+    return;
+  }
+
+  state.syncStatus = "Salvando na nuvem...";
+  render();
+  const result = await saveRemoteState(persistedState());
+  state.syncStatus = result.message;
+  saveState(persistedState());
+  render();
+}
+
+async function loadCloudState() {
+  if (!isSupabaseConfigured()) return;
+  state.syncStatus = "Carregando nuvem...";
+  render();
+  const result = await loadRemoteState();
+
+  if (result.ok && result.data) {
+    Object.assign(state, result.data, { syncStatus: result.message });
+    saveState(persistedState());
+    render();
+    return;
+  }
+
+  if (result.ok && !result.data && state.rounds.length) {
+    state.syncStatus = "Criando registro na nuvem...";
+    render();
+    await persistState();
+    return;
+  }
+
+  state.syncStatus = result.message;
+  saveState(persistedState());
+  render();
+}
 
 function moneyDate(value) {
   if (!value) return "";
@@ -163,6 +214,7 @@ function dashboard(calculated) {
         <span>Diferença: <b>${calculated.diferenca} ponto${calculated.diferenca === 1 ? "" : "s"}</b></span>
         <span>Rodada: <b>${round?.rodada || "Nenhuma rodada importada"}</b></span>
         <span>API: <b>${state.apiStatus}</b></span>
+        <span>Nuvem: <b>${state.syncStatus || "Nuvem não configurada"}</b></span>
       </section>
 
       ${state.showImport ? `
@@ -258,7 +310,7 @@ function bindEvents(calculated) {
     render();
   });
 
-  document.querySelector("#confirmImportBtn")?.addEventListener("click", () => {
+  document.querySelector("#confirmImportBtn")?.addEventListener("click", async () => {
     try {
       const round = JSON.parse(state.importText);
       const result = importRound(state.rounds, round);
@@ -269,7 +321,7 @@ function bindEvents(calculated) {
         state.errors = [];
         state.showImport = false;
         state.importText = "";
-        saveState(state);
+        await persistState();
       }
     } catch {
       state.errors = ["Não foi possível ler o texto. Verifique se o JSON está completo e sem comentários."];
@@ -300,7 +352,7 @@ async function refreshResults() {
   state.rounds = result.rounds;
   state.apiStatus = result.status;
   state.lastUpdatedAt = new Date().toISOString();
-  saveState(state);
+  await persistState();
   render();
 }
 
@@ -310,7 +362,7 @@ async function seedExample(event) {
   const round = await response.json();
   state.rounds = [round];
   state.errors = [];
-  saveState(state);
+  await persistState();
   render();
 }
 
@@ -326,3 +378,4 @@ if ("serviceWorker" in navigator) {
 }
 
 render();
+loadCloudState();
