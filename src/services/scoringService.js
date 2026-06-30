@@ -4,6 +4,10 @@ function hasFinalScore(result) {
   return result && Number.isFinite(result.placarCasa) && Number.isFinite(result.placarFora);
 }
 
+function hasStarted(game) {
+  return !["agendado", "programado", "não iniciado", "nao iniciado"].includes(String(game?.status || "").trim().toLocaleLowerCase("pt-BR"));
+}
+
 function sideFromScore(home, away) {
   if (home > away) return "casa";
   if (away > home) return "fora";
@@ -35,7 +39,7 @@ export function calculateScore(game, result, palpite) {
     };
   }
 
-  if (!hasFinalScore(result)) {
+  if (!hasStarted(game) || !hasFinalScore(result)) {
     return {
       participante: palpite.participante,
       pontos: 0,

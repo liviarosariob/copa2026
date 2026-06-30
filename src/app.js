@@ -69,6 +69,11 @@ function moneyDate(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(`${value}T12:00:00`));
 }
 
+function shortDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(`${value}T12:00:00`));
+}
+
 function participantIcon(name) {
   const slug = name === "Lívia" ? "livia" : "camila";
   return `
@@ -161,8 +166,12 @@ function roundTabs(rounds, activeRound) {
 
 function scoreLine(game) {
   const result = game.resultado;
-  if (!result || !Number.isFinite(result.placarCasa) || !Number.isFinite(result.placarFora)) return "x";
+  if (!gameHasStarted(game) || !result || !Number.isFinite(result.placarCasa) || !Number.isFinite(result.placarFora)) return "x";
   return `${result.placarCasa} x ${result.placarFora}`;
+}
+
+function gameHasStarted(game) {
+  return !["agendado", "programado", "não iniciado", "nao iniciado"].includes(String(game?.status || "").trim().toLocaleLowerCase("pt-BR"));
 }
 
 function guessLine(guess) {
@@ -225,14 +234,14 @@ function gameCard(game) {
   const camilaGuess = game.palpites.find((guess) => guess.participante === "Camila");
   const liviaScore = scoreFor(game, "Lívia");
   const camilaScore = scoreFor(game, "Camila");
-  const hasResult = game.resultado && Number.isFinite(game.resultado.placarCasa) && Number.isFinite(game.resultado.placarFora);
+  const hasResult = gameHasStarted(game) && game.resultado && Number.isFinite(game.resultado.placarCasa) && Number.isFinite(game.resultado.placarFora);
   const duel = !hasResult ? "Aguardando resultado" : liviaScore.pontos === camilaScore.pontos ? "Mesma pontuação" : liviaScore.pontos > camilaScore.pontos ? "Lívia +" + (liviaScore.pontos - camilaScore.pontos) : "Camila +" + (camilaScore.pontos - liviaScore.pontos);
 
   return `
     <article class="gameCard">
       <div class="gameHeader">
         <span class="status ${statusClass(game.status)}">${game.status || "agendado"}</span>
-        <span>${game.horario}</span>
+        <span>${game.data ? `${shortDate(game.data)} - ` : ""}${game.horario}</span>
       </div>
       <div class="matchup">
         <div><b>${home.sigla}</b><small>${home.name}</small></div>
@@ -272,9 +281,9 @@ function dashboard(calculated) {
           </div>
         </div>
         <nav>
-          <button id="importBtn">Importar JSON</button>
-          <button id="refreshBtn">Atualizar agora</button>
-          <button id="allGamesBtn">Todos os jogos</button>
+          <button id="importBtn" class="actionImport">Importar JSON</button>
+          <button id="refreshBtn" class="iconButton actionRefresh" aria-label="Atualizar agora" title="Atualizar agora">↻</button>
+          <button id="allGamesBtn" class="actionSecondary">Todos os jogos</button>
           <button id="printBtn" class="primary">Modo Print</button>
         </nav>
       </header>
@@ -338,9 +347,9 @@ function allGamesPage(calculated) {
           <div><h1>Todos os jogos</h1></div>
         </div>
         <nav>
-          <button id="homeBtn">Principal</button>
-          <button id="importBtn">Importar JSON</button>
-          <button id="refreshBtn">Atualizar agora</button>
+          <button id="homeBtn" class="actionSecondary">Principal</button>
+          <button id="importBtn" class="actionImport">Importar JSON</button>
+          <button id="refreshBtn" class="iconButton actionRefresh" aria-label="Atualizar agora" title="Atualizar agora">↻</button>
           <button id="printBtn" class="primary">Modo Print</button>
         </nav>
       </header>

@@ -71,6 +71,7 @@ function mapEventToGame(game, event, swapped) {
   const localAway = swapped ? apiHome : apiAway;
   const placarCasa = Number(localHome?.score);
   const placarFora = Number(localAway?.score);
+  const status = statusFromEspn(competition?.status);
   let penaltis = game.resultado?.penaltis || null;
 
   if (Number.isFinite(placarCasa) && Number.isFinite(placarFora) && placarCasa === placarFora) {
@@ -80,8 +81,8 @@ function mapEventToGame(game, event, swapped) {
 
   return {
     ...game,
-    status: statusFromEspn(competition?.status),
-    resultado: Number.isFinite(placarCasa) && Number.isFinite(placarFora)
+    status,
+    resultado: status !== "agendado" && Number.isFinite(placarCasa) && Number.isFinite(placarFora)
       ? {
           placarCasa,
           placarFora,
