@@ -2,8 +2,8 @@ const CACHE_NAME = "bolao-livia-camila-v14";
 const ASSETS = [
   "./",
   "index.html",
-  "src/app.js",
-  "src/styles.css",
+  "src/app.js?v=14",
+  "src/styles.css?v=14",
   "src/services/scoringService.js",
   "src/services/storageService.js",
   "src/services/supabaseConfig.js",
