@@ -1,24 +1,185 @@
 # Lívia e Camila - Copa do Mundo 2026
 
-Aplicação local para acompanhar o bolão entre Lívia e Camila, com cálculo automático de pontuação, ranking em formato de duelo, importação/exportação de JSON, Modo Print e PWA offline.
+App simples para acompanhar o bolão da Copa entre Lívia e Camila.
 
-## Como rodar
+O foco é importar os palpites em JSON, atualizar resultados pela ESPN, calcular a pontuação e abrir o **Modo Print** para mandar screenshot no WhatsApp.
 
-1. Instale o Node.js.
-2. Abra esta pasta no terminal.
-3. Rode:
+## Como Usar
+
+### Pelo GitHub Pages
+
+Depois de publicar o repositório no GitHub Pages, abra a URL no celular:
+
+```text
+https://SEU_USUARIO.github.io/copa2026/
+```
+
+Os dados ficam salvos no navegador do próprio celular. Quem abrir o mesmo link em outro aparelho verá o app vazio.
+
+### Localmente
 
 ```bash
 npm run start
 ```
 
-4. Acesse o endereço que aparecer no terminal. Normalmente será:
+Abra o endereço mostrado no terminal, por exemplo:
 
 ```text
 http://localhost:4173
 ```
 
-Se essa porta já estiver ocupada, o app abre automaticamente na próxima porta livre, por exemplo `http://localhost:4174`.
+Se a porta estiver ocupada, o servidor usa a próxima porta livre.
+
+## Fluxo
+
+1. Cole o texto do WhatsApp no ChatGPT e peça o JSON.
+2. No app, clique em **Importar JSON**.
+3. Cole o JSON no campo.
+4. Clique em **Importar texto**.
+5. Clique em **Atualizar agora** para buscar resultados na ESPN.
+6. Abra **Modo Print**.
+7. Tire o print e envie para Camila.
+
+## Formato do JSON
+
+O app aceita JSON neste formato:
+
+```json
+{
+  "rodada": "16 avos de final",
+  "data": "2026-06-30",
+  "jogos": [
+    {
+      "id": "CIV-NOR-2026-06-30",
+      "timeCasa": "Costa do Marfim",
+      "timeFora": "Noruega",
+      "horario": "14:00",
+      "mataMata": true,
+      "palpites": [
+        {
+          "participante": "Lívia",
+          "placarCasa": 1,
+          "placarFora": 1,
+          "penaltis": "Noruega"
+        },
+        {
+          "participante": "Camila",
+          "placarCasa": 1,
+          "placarFora": 1,
+          "penaltis": "Noruega"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Campos opcionais que o app consegue completar para os países cadastrados:
+
+- `siglaCasa`
+- `siglaFora`
+- `emojiCasa`
+- `emojiFora`
+
+Exemplo completo em:
+
+```text
+data/exemplo-rodada.json
+```
+
+## Resultado Manual
+
+Se a ESPN não encontrar um jogo, você pode importar o resultado manualmente no próprio JSON:
+
+```json
+"resultado": {
+  "placarCasa": 1,
+  "placarFora": 2,
+  "penaltis": null
+}
+```
+
+Em mata-mata, `penaltis` deve ser o país classificado nos pênaltis. Se o jogo não foi para pênaltis, use `null`.
+
+## Pontuação
+
+- Acertou vencedor ou classificado: `+1`
+- Acertou placar exato: `+2`
+
+Em mata-mata:
+
+- o placar exato é o placar do tempo normal;
+- se terminar empatado e houver pênaltis, o campo `penaltis` define quem passou.
+
+A lógica fica em:
+
+```text
+src/services/scoringService.js
+```
+
+## Atualização de Resultados
+
+O app usa a API pública da ESPN, sem chave:
+
+```text
+https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=YYYYMMDD
+```
+
+O serviço fica em:
+
+```text
+src/services/footballResultsService.js
+```
+
+Quando você clica em **Atualizar agora**, o app busca os jogos nas datas das rodadas importadas.
+
+## Armazenamento
+
+Os dados ficam salvos no navegador usando `localStorage`.
+
+Chave usada:
+
+```text
+bolao-livia-camila-2026
+```
+
+Isso significa:
+
+- continua salvo ao fechar e abrir o navegador;
+- funciona no celular;
+- não salva nada no GitHub;
+- se limpar os dados do navegador, apaga;
+- outro aparelho começa vazio.
+
+Use **Exportar dados** para baixar backup em JSON.
+
+## Modo Print
+
+Clique em **Modo Print** ou acesse:
+
+```text
+#print
+```
+
+Essa tela não mostra botões nem controles, só o conteúdo para screenshot vertical.
+
+## GitHub Pages
+
+Para publicar:
+
+1. Abra o repositório no GitHub.
+2. Vá em **Settings**.
+3. Entre em **Pages**.
+4. Em **Build and deployment**, escolha **Deploy from a branch**.
+5. Branch: `main`.
+6. Folder: `/root`.
+7. Salve.
+
+URL esperada:
+
+```text
+https://SEU_USUARIO.github.io/copa2026/
+```
 
 ## Ícones da Lívia e da Camila
 
@@ -29,130 +190,4 @@ icons/livia.svg
 icons/camila.svg
 ```
 
-Já existem ícones simples de placeholder. Para usar os desenhos finais, substitua esses dois arquivos mantendo os mesmos nomes.
-
-## Importar JSON
-
-Use o botão **Importar JSON**, cole o texto do JSON no campo que aparece e clique em **Importar texto**.
-
-O formato base está no exemplo:
-
-```text
-data/exemplo-rodada.json
-```
-
-O app valida:
-
-- se a rodada tem data e jogos;
-- se existem apenas Lívia e Camila;
-- se cada jogo tem palpite das duas;
-- se os placares dos palpites são numéricos.
-
-Depois da importação, os dados ficam salvos no navegador e continuam lá após fechar e abrir de novo.
-
-## Regras de pontuação
-
-A camada de cálculo fica em:
-
-```text
-src/services/scoringService.js
-```
-
-Ela recebe jogo, resultado e palpite, e retorna:
-
-- pontos;
-- acertouVencedor;
-- acertouPlacar;
-- descricaoCurta.
-
-Pontuação:
-
-- acertou vencedor ou classificado: +1;
-- acertou placar exato: +2;
-- em mata-mata, o placar exato é o dos 90 minutos e o classificado vem de `penaltis`.
-
-## Exportar dados
-
-Use **Exportar dados** para baixar um backup com:
-
-- rodadas;
-- jogos;
-- palpites;
-- resultados;
-- pontuação calculada;
-- ranking;
-- líder;
-- diferença de pontos.
-
-## API de resultados
-
-O serviço de API fica isolado em:
-
-```text
-src/services/footballResultsService.js
-```
-
-Hoje o serviço usa a ESPN, sem API key:
-
-```text
-GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=YYYYMMDD
-```
-Quando houver rodadas importadas, o app usa as datas das rodadas para buscar os placares daquele dia.
-
-Referências:
-
-- https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
-
-Para trocar de API futuramente, altere apenas esse arquivo.
-
-O app tenta atualizar:
-
-- ao clicar em **Atualizar agora**;
-- quando a internet volta;
-- mantendo os dados locais quando estiver offline.
-
-## Modo Print
-
-Clique em **Modo Print** ou acesse:
-
-```text
-http://localhost:4173/#print
-```
-
-Essa tela é otimizada para screenshot vertical no celular e não mostra menus, botões ou controles.
-
-## PWA e offline
-
-O app registra um service worker e pode ser instalado pelo navegador. Depois do primeiro acesso em `localhost`, os arquivos principais ficam disponíveis offline.
-
-## Subir no GitHub
-
-Este projeto é estático e pode ficar no GitHub como backup do código. Também pode ser publicado pelo GitHub Pages.
-
-Passos básicos:
-
-```bash
-git init
-git add .
-git commit -m "Primeira versão do bolão"
-git branch -M main
-git remote add origin https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
-git push -u origin main
-```
-
-Para publicar no GitHub Pages:
-
-1. Abra o repositório no GitHub.
-2. Vá em **Settings**.
-3. Entre em **Pages**.
-4. Em **Build and deployment**, escolha **Deploy from a branch**.
-5. Escolha branch `main` e pasta `/root`.
-6. Salve.
-
-O endereço ficará parecido com:
-
-```text
-https://SEU_USUARIO.github.io/NOME_DO_REPOSITORIO/
-```
-
-Aviso importante: como o app roda no navegador, qualquer chave colocada direto no código ficaria visível. A integração atual com ESPN não precisa de chave.
+Pode substituir esses dois SVGs mantendo os mesmos nomes.

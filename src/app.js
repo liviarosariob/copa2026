@@ -22,6 +22,15 @@ function participantIcon(name) {
   `;
 }
 
+function appLogo() {
+  return `
+    <span class="appLogo">
+      <img src="logo.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
+      <span>LC</span>
+    </span>
+  `;
+}
+
 function currentRound(rounds) {
   return rounds[rounds.length - 1] || null;
 }
@@ -128,9 +137,12 @@ function dashboard(calculated) {
   return `
     <section class="shell">
       <header class="topBar">
-        <div>
+        <div class="brand">
+          ${appLogo()}
+          <div>
           <p class="eyebrow">Bolão premium</p>
-          <h1>Lívia e Camila - Copa do Mundo 2026</h1>
+          <h1>Lívia e Camila</h1>
+          </div>
         </div>
         <nav>
           <button id="importBtn">Importar JSON</button>
@@ -190,8 +202,13 @@ function printMode(calculated) {
   const round = currentRound(calculated.rounds);
   return `
     <section class="printPage">
-      <p class="eyebrow">Modo Print</p>
-      <h1>Lívia e Camila<br />Copa do Mundo 2026</h1>
+      <div class="printBrand">
+        ${appLogo()}
+        <div>
+          <p class="eyebrow">Modo Print</p>
+          <h1>Lívia e Camila</h1>
+        </div>
+      </div>
       <div class="printMeta">
         <span>${round?.rodada || "Rodada"}</span>
         <span>${moneyDate(round?.data) || new Intl.DateTimeFormat("pt-BR").format(new Date())}</span>

@@ -10,7 +10,7 @@ export function validateRound(input) {
   const round = input && typeof input === "object"
     ? { ...input, jogos: (input.jogos || []).map(enrichCountryFields) }
     : input;
-  if (!round || typeof round !== "object") errors.push("O arquivo precisa conter um objeto JSON.");
+  if (!round || typeof round !== "object") errors.push("O texto precisa conter um objeto JSON.");
   if (!round?.rodada) errors.push("Informe o nome da rodada.");
   if (!round?.data) errors.push("Informe a data da rodada.");
   if (!Array.isArray(round?.jogos) || round.jogos.length === 0) errors.push("Inclua pelo menos um jogo.");

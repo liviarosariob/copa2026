@@ -98,6 +98,47 @@ button.primary {
   justify-content: space-between;
 }
 
+.brand,
+.printBrand {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.appLogo {
+  background: var(--surface);
+  border: var(--button-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--button-shadow);
+  display: grid;
+  flex: 0 0 auto;
+  height: 74px;
+  overflow: hidden;
+  place-items: center;
+  width: 74px;
+}
+
+.appLogo img,
+.appLogo span {
+  height: 100%;
+  width: 100%;
+}
+
+.appLogo img {
+  object-fit: contain;
+  padding: 6px;
+}
+
+.appLogo span {
+  background: var(--yellow);
+  color: var(--ink);
+  display: none;
+  font-family: var(--display);
+  font-size: 1.45rem;
+  line-height: 1;
+  place-items: center;
+}
+
 .topBar h1,
 .printPage h1 {
   font-family: var(--display);
@@ -519,10 +560,20 @@ nav {
   text-align: center;
 }
 
+.printBrand {
+  justify-content: center;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.printBrand .eyebrow {
+  text-align: left;
+}
+
 .printPage h1 {
-  font-size: 2.8rem;
+  font-size: 2.35rem;
   max-width: none;
-  text-align: center;
+  text-align: left;
 }
 
 .printMeta,
@@ -585,6 +636,15 @@ nav {
   .topBar h1 {
     font-size: clamp(1.5rem, 9vw, 2.45rem);
     max-width: 100%;
+  }
+
+  .brand {
+    align-items: center;
+  }
+
+  .appLogo {
+    height: 58px;
+    width: 58px;
   }
 
   nav {
