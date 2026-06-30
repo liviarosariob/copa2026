@@ -1,0 +1,63 @@
+{
+  "rodada": "Oitavas de Final",
+  "data": "2026-06-30",
+  "jogos": [
+    {
+      "id": "CIV-NOR-2026-06-30",
+      "timeCasa": "Costa do Marfim",
+      "timeFora": "Noruega",
+      "siglaCasa": "CIV",
+      "siglaFora": "NOR",
+      "emojiCasa": "🇨🇮",
+      "emojiFora": "🇳🇴",
+      "horario": "14:00",
+      "mataMata": true,
+      "status": "finalizado",
+      "resultado": {
+        "placarCasa": 1,
+        "placarFora": 1,
+        "penaltis": "Noruega"
+      },
+      "palpites": [
+        {
+          "participante": "Lívia",
+          "placarCasa": 1,
+          "placarFora": 1,
+          "penaltis": "Noruega"
+        },
+        {
+          "participante": "Camila",
+          "placarCasa": 2,
+          "placarFora": 1,
+          "penaltis": null
+        }
+      ]
+    },
+    {
+      "id": "FRA-SWE-2026-06-30",
+      "timeCasa": "França",
+      "timeFora": "Suécia",
+      "siglaCasa": "FRA",
+      "siglaFora": "SWE",
+      "emojiCasa": "🇫🇷",
+      "emojiFora": "🇸🇪",
+      "horario": "18:00",
+      "mataMata": true,
+      "status": "agendado",
+      "palpites": [
+        {
+          "participante": "Lívia",
+          "placarCasa": 3,
+          "placarFora": 0,
+          "penaltis": null
+        },
+        {
+          "participante": "Camila",
+          "placarCasa": 3,
+          "placarFora": 1,
+          "penaltis": null
+        }
+      ]
+    }
+  ]
+}

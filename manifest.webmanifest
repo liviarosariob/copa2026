@@ -1,0 +1,22 @@
+{
+  "name": "Lívia e Camila - Copa do Mundo 2026",
+  "short_name": "Bolão 2026",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#e4ecd5",
+  "theme_color": "#0b2f1a",
+  "icons": [
+    {
+      "src": "icons/livia.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/camila.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
