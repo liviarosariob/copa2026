@@ -428,13 +428,10 @@ nav {
   min-width: 0;
 }
 
-.matchup span {
-  font-size: 1.8rem;
-}
-
 .matchup b {
   font-family: var(--display);
-  font-size: 1.15rem;
+  font-size: 1.55rem;
+  line-height: 1;
 }
 
 .matchup small {
@@ -626,6 +623,10 @@ nav {
 
   .matchup {
     gap: 8px;
+  }
+
+  .matchup b {
+    font-size: 1.25rem;
   }
 
   .matchup > strong {

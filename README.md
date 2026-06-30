@@ -92,23 +92,18 @@ O serviço de API fica isolado em:
 src/services/footballResultsService.js
 ```
 
-Hoje o serviço está preparado para `football-data.org`, usando:
+Hoje o serviço usa a ESPN, sem API key:
 
 ```text
-GET /v4/competitions/WC/matches?season=2026
-Header: X-Auth-Token
+GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=YYYYMMDD
 ```
-
-Quando houver rodadas importadas, o app também envia `dateFrom` e `dateTo` para buscar apenas o período necessário.
+Quando houver rodadas importadas, o app usa as datas das rodadas para buscar os placares daquele dia.
 
 Referências:
 
-- https://www.football-data.org/documentation/quickstart/
-- https://docs.football-data.org/general/v4/lookup_tables.html
+- https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
 
 Para trocar de API futuramente, altere apenas esse arquivo.
-
-Na primeira vez que você clicar em **Atualizar agora**, o app pede a API key e salva no navegador local. A chave não fica no código do GitHub.
 
 O app tenta atualizar:
 
@@ -160,4 +155,4 @@ O endereço ficará parecido com:
 https://SEU_USUARIO.github.io/NOME_DO_REPOSITORIO/
 ```
 
-Aviso importante: como o app roda no navegador, a chave informada fica salva somente no navegador de quem usar o app. Em um repositório público, não coloque a chave direto no código.
+Aviso importante: como o app roda no navegador, qualquer chave colocada direto no código ficaria visível. A integração atual com ESPN não precisa de chave.

@@ -1,9 +1,6 @@
 import { findCountry } from "./countries.js";
 
-const API_KEY_STORAGE = "football-data-api-key";
-const API_BASE_URL = "https://api.football-data.org/v4";
-const COMPETITION_CODE = "WC";
-const SEASON = "2026";
+const ESPN_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 
 function normalizeTeam(value) {
   return String(value || "")
@@ -13,35 +10,21 @@ function normalizeTeam(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function statusFromApi(status) {
-  if (status === "FINISHED") return "finalizado";
-  if (["IN_PLAY", "PAUSED", "LIVE", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(status)) return "ao vivo";
-  return "agendado";
+function uniqueDates(rounds) {
+  return [...new Set((rounds || []).map((round) => round.data).filter(Boolean))];
 }
 
-function dateRange(rounds) {
-  const dates = (rounds || []).map((round) => round.data).filter(Boolean).sort();
-  if (!dates.length) return null;
-  return { from: dates[0], to: dates[dates.length - 1] };
-}
-
-function buildMatchesUrl(rounds) {
-  const url = new URL(`${API_BASE_URL}/competitions/${COMPETITION_CODE}/matches`);
-  url.searchParams.set("season", SEASON);
-  const range = dateRange(rounds);
-  if (range) {
-    url.searchParams.set("dateFrom", range.from);
-    url.searchParams.set("dateTo", range.to);
-  }
-  return url;
+function espnDate(value) {
+  return String(value || "").replace(/-/g, "");
 }
 
 function teamMatches(apiTeam, localName, localSigla) {
   const local = findCountry(localSigla) || findCountry(localName);
   const candidates = [
     apiTeam?.name,
-    apiTeam?.shortName,
-    apiTeam?.tla
+    apiTeam?.shortDisplayName,
+    apiTeam?.displayName,
+    apiTeam?.abbreviation
   ].map(normalizeTeam);
 
   const expected = [
@@ -55,48 +38,70 @@ function teamMatches(apiTeam, localName, localSigla) {
   return expected.some((item) => item && candidates.includes(item));
 }
 
-function findMatch(game, matches) {
-  for (const match of matches) {
-    const direct =
-      teamMatches(match.homeTeam, game.timeCasa, game.siglaCasa) &&
-      teamMatches(match.awayTeam, game.timeFora, game.siglaFora);
-    if (direct) return { match, swapped: false };
+function competitorByHomeAway(competition, homeAway) {
+  return (competition?.competitors || []).find((competitor) => competitor.homeAway === homeAway);
+}
 
-    const swapped =
-      teamMatches(match.homeTeam, game.timeFora, game.siglaFora) &&
-      teamMatches(match.awayTeam, game.timeCasa, game.siglaCasa);
-    if (swapped) return { match, swapped: true };
+function findMatch(game, events) {
+  for (const event of events) {
+    const competition = event.competitions?.[0];
+    const home = competitorByHomeAway(competition, "home")?.team;
+    const away = competitorByHomeAway(competition, "away")?.team;
+    const direct = teamMatches(home, game.timeCasa, game.siglaCasa) && teamMatches(away, game.timeFora, game.siglaFora);
+    if (direct) return { event, swapped: false };
+
+    const swapped = teamMatches(home, game.timeFora, game.siglaFora) && teamMatches(away, game.timeCasa, game.siglaCasa);
+    if (swapped) return { event, swapped: true };
   }
   return null;
 }
 
-function penaltyWinner(game, match, swapped) {
-  const fullTime = match.score?.fullTime || {};
-  if (fullTime.home !== fullTime.away) return game.resultado?.penaltis || null;
-  if (match.score?.winner === "HOME_TEAM") return swapped ? game.timeFora : game.timeCasa;
-  if (match.score?.winner === "AWAY_TEAM") return swapped ? game.timeCasa : game.timeFora;
-  return game.resultado?.penaltis || null;
+function statusFromEspn(status) {
+  const state = status?.type?.state;
+  if (status?.type?.completed || state === "post") return "finalizado";
+  if (state === "in") return "ao vivo";
+  return "agendado";
 }
 
-function headerValue(headers, names) {
-  return names.map((name) => headers.get(name)).find(Boolean) || "";
+function mapEventToGame(game, event, swapped) {
+  const competition = event.competitions?.[0];
+  const apiHome = competitorByHomeAway(competition, "home");
+  const apiAway = competitorByHomeAway(competition, "away");
+  const localHome = swapped ? apiAway : apiHome;
+  const localAway = swapped ? apiHome : apiAway;
+  const placarCasa = Number(localHome?.score);
+  const placarFora = Number(localAway?.score);
+  let penaltis = game.resultado?.penaltis || null;
+
+  if (Number.isFinite(placarCasa) && Number.isFinite(placarFora) && placarCasa === placarFora) {
+    if (localHome?.winner) penaltis = game.timeCasa;
+    if (localAway?.winner) penaltis = game.timeFora;
+  }
+
+  return {
+    ...game,
+    status: statusFromEspn(competition?.status),
+    resultado: Number.isFinite(placarCasa) && Number.isFinite(placarFora)
+      ? {
+          placarCasa,
+          placarFora,
+          penaltis,
+          atualizadoEm: new Date().toISOString(),
+          fonte: "espn"
+        }
+      : game.resultado
+  };
 }
 
-function apiStatusMessage(response, updatedCount) {
-  const available = headerValue(response.headers, ["X-RequestsAvailable", "X-Requests-Available", "X-RequestsAvailable-Minute", "X-Requests-Available-Minute"]);
-  const reset = headerValue(response.headers, ["X-RequestCounter-Reset", "X-Request-Counter-Reset"]);
-  const limit = available ? ` Restam ${available} chamadas.` : "";
-  const wait = reset ? ` Limite reseta em ${reset}s.` : "";
-  return `Resultados atualizados pela API. ${updatedCount} jogo${updatedCount === 1 ? "" : "s"} encontrado${updatedCount === 1 ? "" : "s"}.${limit}${wait}`;
-}
-
-function getApiKey() {
-  const saved = localStorage.getItem(API_KEY_STORAGE);
-  if (saved) return saved;
-  const typed = window.prompt("Cole sua API key da football-data.org para atualizar os resultados:");
-  const apiKey = String(typed || "").trim();
-  if (apiKey) localStorage.setItem(API_KEY_STORAGE, apiKey);
-  return apiKey;
+async function fetchEspnEvents(rounds) {
+  const dates = uniqueDates(rounds);
+  const urls = dates.length
+    ? dates.map((date) => `${ESPN_BASE_URL}?dates=${espnDate(date)}`)
+    : [ESPN_BASE_URL];
+  const payloads = await Promise.all(
+    urls.map((url) => fetch(url).then((response) => response.ok ? response.json() : { events: [] }))
+  );
+  return payloads.flatMap((payload) => payload.events || []);
 }
 
 export async function updateResults(rounds) {
@@ -104,49 +109,24 @@ export async function updateResults(rounds) {
     return { rounds, status: "Offline: mantendo os dados salvos." };
   }
 
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return { rounds, status: "API key não configurada. Use resultados manuais no JSON ou informe a chave ao atualizar." };
+  try {
+    const events = await fetchEspnEvents(rounds);
+    let updatedCount = 0;
+    const nextRounds = rounds.map((round) => ({
+      ...round,
+      jogos: (round.jogos || []).map((game) => {
+        const found = findMatch(game, events);
+        if (!found) return game;
+        updatedCount += 1;
+        return mapEventToGame(game, found.event, found.swapped);
+      })
+    }));
+
+    return {
+      rounds: nextRounds,
+      status: `ESPN encontrou ${updatedCount} jogo${updatedCount === 1 ? "" : "s"}.`
+    };
+  } catch {
+    return { rounds, status: "ESPN não respondeu agora." };
   }
-
-  const response = await fetch(buildMatchesUrl(rounds), {
-    headers: { "X-Auth-Token": apiKey }
-  });
-
-  if (!response.ok) {
-    const reset = headerValue(response.headers, ["X-RequestCounter-Reset", "X-Request-Counter-Reset"]);
-    const wait = reset ? ` Tente de novo em ${reset}s.` : "";
-    return { rounds, status: `API respondeu erro ${response.status}.${wait}` };
-  }
-
-  const payload = await response.json();
-  const matches = payload.matches || [];
-  let updatedCount = 0;
-  const nextRounds = rounds.map((round) => ({
-    ...round,
-    jogos: (round.jogos || []).map((game) => {
-      const found = findMatch(game, matches);
-      if (!found) return game;
-      const { match, swapped } = found;
-      updatedCount += 1;
-      const apiFullTime = match.score?.fullTime || {};
-      const fullTime = swapped
-        ? { home: apiFullTime.away, away: apiFullTime.home }
-        : apiFullTime;
-      return {
-        ...game,
-        status: statusFromApi(match.status),
-        resultado: Number.isFinite(fullTime.home) && Number.isFinite(fullTime.away)
-          ? {
-              placarCasa: fullTime.home,
-              placarFora: fullTime.away,
-              penaltis: penaltyWinner(game, match, swapped),
-              atualizadoEm: new Date().toISOString()
-            }
-          : game.resultado
-      };
-    })
-  }));
-
-  return { rounds: nextRounds, status: apiStatusMessage(response, updatedCount) };
 }

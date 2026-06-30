@@ -101,9 +101,9 @@ function gameCard(game) {
         <span>${game.horario}</span>
       </div>
       <div class="matchup">
-        <div><span>${home.emoji}</span><b>${home.sigla}</b><small>${home.name}</small></div>
+        <div><b>${home.sigla}</b><small>${home.name}</small></div>
         <strong>${scoreLine(game)}</strong>
-        <div><span>${away.emoji}</span><b>${away.sigla}</b><small>${away.name}</small></div>
+        <div><b>${away.sigla}</b><small>${away.name}</small></div>
       </div>
       <div class="guesses">
         <div class="${liviaScore.acertouPlacar ? "exact" : ""}">
