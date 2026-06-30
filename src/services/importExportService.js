@@ -1,4 +1,4 @@
-import { PARTICIPANTES, calculateTournament } from "./scoringService.js";
+import { PARTICIPANTES } from "./scoringService.js";
 import { enrichCountryFields } from "./countries.js";
 
 function isNumber(value) {
@@ -46,15 +46,4 @@ export function importRound(currentRounds, round) {
   if (errors.length) return { ok: false, errors };
   const nextRounds = [...currentRounds.filter((item) => item.rodada !== enrichedRound.rodada || item.data !== enrichedRound.data), enrichedRound];
   return { ok: true, rounds: nextRounds };
-}
-
-export function buildExportPayload(state) {
-  const calculated = calculateTournament(state.rounds || []);
-  return {
-    exportedAt: new Date().toISOString(),
-    rodadas: calculated.rounds,
-    ranking: calculated.ranking,
-    lider: calculated.lider,
-    diferenca: calculated.diferenca
-  };
 }

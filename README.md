@@ -14,7 +14,7 @@ Depois de publicar o repositório no GitHub Pages, abra a URL no celular:
 https://SEU_USUARIO.github.io/copa2026/
 ```
 
-Os dados ficam salvos no navegador do próprio celular. Quem abrir o mesmo link em outro aparelho verá o app vazio.
+Os dados ficam salvos no Supabase quando ele estiver configurado. Assim celular, PC e outros navegadores veem o mesmo bolão.
 
 ### Localmente
 
@@ -151,7 +151,7 @@ Isso significa:
 - ao importar ou atualizar resultados, o app salva na nuvem;
 - se a internet cair, o último estado ainda abre pelo cache local.
 
-Use **Exportar dados** para baixar backup em JSON.
+Com o Supabase configurado, não precisa baixar backup pelo app. A fonte principal passa a ser a tabela `bolao_state`.
 
 ## Configurar Supabase
 
@@ -185,6 +185,110 @@ on public.bolao_state
 for update
 using (id = 'principal')
 with check (id = 'principal');
+```
+
+Para já inserir a rodada inicial que você mandou, rode também:
+
+```sql
+insert into public.bolao_state (id, data, updated_at)
+values (
+  'principal',
+  '{
+    "rounds": [
+      {
+        "rodada": "16 avos de final",
+        "data": "2026-06-30",
+        "jogos": [
+          {
+            "id": "CIV-NOR-2026-06-30",
+            "timeCasa": "Costa do Marfim",
+            "timeFora": "Noruega",
+            "siglaCasa": "CIV",
+            "siglaFora": "NOR",
+            "horario": "14:00",
+            "mataMata": true,
+            "status": "encerrado",
+            "resultado": {
+              "placarCasa": 1,
+              "placarFora": 2,
+              "penaltis": null
+            },
+            "palpites": [
+              {
+                "participante": "Lívia",
+                "placarCasa": 1,
+                "placarFora": 1,
+                "penaltis": "Noruega"
+              },
+              {
+                "participante": "Camila",
+                "placarCasa": 1,
+                "placarFora": 1,
+                "penaltis": "Noruega"
+              }
+            ]
+          },
+          {
+            "id": "FRA-SWE-2026-06-30",
+            "timeCasa": "França",
+            "timeFora": "Suécia",
+            "siglaCasa": "FRA",
+            "siglaFora": "SWE",
+            "horario": "18:00",
+            "mataMata": true,
+            "status": "agendado",
+            "resultado": null,
+            "palpites": [
+              {
+                "participante": "Lívia",
+                "placarCasa": 3,
+                "placarFora": 0,
+                "penaltis": null
+              },
+              {
+                "participante": "Camila",
+                "placarCasa": 3,
+                "placarFora": 1,
+                "penaltis": null
+              }
+            ]
+          },
+          {
+            "id": "MEX-ECU-2026-06-30",
+            "timeCasa": "México",
+            "timeFora": "Equador",
+            "siglaCasa": "MEX",
+            "siglaFora": "ECU",
+            "horario": "22:00",
+            "mataMata": true,
+            "status": "agendado",
+            "resultado": null,
+            "palpites": [
+              {
+                "participante": "Lívia",
+                "placarCasa": 2,
+                "placarFora": 2,
+                "penaltis": "Equador"
+              },
+              {
+                "participante": "Camila",
+                "placarCasa": 2,
+                "placarFora": 1,
+                "penaltis": null
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "lastUpdatedAt": null,
+    "apiStatus": "Resultado da Noruega inserido manualmente"
+  }'::jsonb,
+  now()
+)
+on conflict (id) do update
+set data = excluded.data,
+    updated_at = now();
 ```
 
 Depois copie no Supabase:

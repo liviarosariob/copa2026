@@ -1,5 +1,5 @@
 import { calculateTournament } from "./services/scoringService.js";
-import { buildExportPayload, importRound } from "./services/importExportService.js";
+import { importRound } from "./services/importExportService.js";
 import { loadState, saveState } from "./services/storageService.js";
 import { isSupabaseConfigured, loadRemoteState, saveRemoteState } from "./services/supabaseService.js";
 import { updateResults } from "./services/footballResultsService.js";
@@ -191,13 +191,11 @@ function dashboard(calculated) {
         <div class="brand">
           ${appLogo()}
           <div>
-          <p class="eyebrow">Bolão premium</p>
           <h1>Lívia e Camila</h1>
           </div>
         </div>
         <nav>
           <button id="importBtn">Importar JSON</button>
-          <button id="exportBtn">Exportar dados</button>
           <button id="refreshBtn">Atualizar agora</button>
           <button id="printBtn" class="primary">Modo Print</button>
         </nav>
@@ -327,17 +325,6 @@ function bindEvents(calculated) {
       state.errors = ["Não foi possível ler o texto. Verifique se o JSON está completo e sem comentários."];
     }
     render();
-  });
-
-  document.querySelector("#exportBtn")?.addEventListener("click", () => {
-    const payload = buildExportPayload(state);
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "backup-bolao-livia-camila.json";
-    link.click();
-    URL.revokeObjectURL(url);
   });
 
   document.querySelector("#refreshBtn")?.addEventListener("click", refreshResults);
