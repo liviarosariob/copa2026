@@ -6,7 +6,13 @@ import { updateResults } from "./services/footballResultsService.js";
 import { findCountry } from "./services/countries.js";
 
 const app = document.querySelector("#app");
-const state = { ...loadState(), view: location.hash === "#print" ? "print" : "dashboard", errors: [], showImport: false, importText: "" };
+const state = { ...loadState(), view: viewFromHash(), errors: [], showImport: false, importText: "", selectedDate: "", selectedRound: "" };
+
+function viewFromHash() {
+  if (location.hash === "#print") return "print";
+  if (location.hash === "#todos") return "all";
+  return "dashboard";
+}
 
 function persistedState() {
   return {
@@ -82,8 +88,75 @@ function appLogo() {
   `;
 }
 
-function currentRound(rounds) {
-  return rounds[rounds.length - 1] || null;
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function sortedRounds(rounds) {
+  return [...rounds].sort((a, b) => `${a.data || ""}-${a.rodada || ""}`.localeCompare(`${b.data || ""}-${b.rodada || ""}`));
+}
+
+function uniqueDates(rounds) {
+  return [...new Set(sortedRounds(rounds).map((round) => round.data).filter(Boolean))];
+}
+
+function availableDates(rounds) {
+  return [...new Set([todayIso(), ...uniqueDates(rounds)])].sort();
+}
+
+function uniqueRoundNames(rounds) {
+  return [...new Set(sortedRounds(rounds).map((round) => round.rodada).filter(Boolean))];
+}
+
+function selectedDate(rounds) {
+  const dates = availableDates(rounds);
+  if (state.selectedDate && dates.includes(state.selectedDate)) return state.selectedDate;
+  return todayIso();
+}
+
+function selectedRoundName(rounds) {
+  const names = uniqueRoundNames(rounds);
+  if (!names.length) return "";
+  if (state.selectedRound && names.includes(state.selectedRound)) return state.selectedRound;
+  return names[0];
+}
+
+function roundsForDate(rounds, date) {
+  return sortedRounds(rounds).filter((round) => round.data === date);
+}
+
+function gamesForDate(rounds, date) {
+  return roundsForDate(rounds, date).flatMap((round) => round.jogos.map((game) => ({ ...game, rodada: round.rodada, data: round.data })));
+}
+
+function gamesForRound(rounds, roundName) {
+  return sortedRounds(rounds)
+    .filter((round) => round.rodada === roundName)
+    .flatMap((round) => round.jogos.map((game) => ({ ...game, rodada: round.rodada, data: round.data })));
+}
+
+function datePager(rounds, activeDate) {
+  const dates = availableDates(rounds);
+  const activeIndex = Math.max(0, dates.indexOf(activeDate));
+  const previousDate = dates[activeIndex - 1] || "";
+  const nextDate = dates[activeIndex + 1] || "";
+  return `
+    <div class="datePager" aria-label="Navegar por dia">
+      <button class="dateNav" data-date="${previousDate}" ${previousDate ? "" : "disabled"} aria-label="Dia anterior">‹</button>
+      <strong>${moneyDate(activeDate)}</strong>
+      <button class="dateNav" data-date="${nextDate}" ${nextDate ? "" : "disabled"} aria-label="Próximo dia">›</button>
+    </div>
+  `;
+}
+
+function roundTabs(rounds, activeRound) {
+  const names = uniqueRoundNames(rounds);
+  if (names.length <= 1) return "";
+  return `
+    <div class="filterTabs" aria-label="Filtrar por rodada">
+      ${names.map((name) => `<button class="roundFilter ${name === activeRound ? "active" : ""}" data-round="${escapeHtml(name)}">${name}</button>`).join("")}
+    </div>
+  `;
 }
 
 function scoreLine(game) {
@@ -152,7 +225,8 @@ function gameCard(game) {
   const camilaGuess = game.palpites.find((guess) => guess.participante === "Camila");
   const liviaScore = scoreFor(game, "Lívia");
   const camilaScore = scoreFor(game, "Camila");
-  const duel = liviaScore.pontos === camilaScore.pontos ? "Empate no jogo" : liviaScore.pontos > camilaScore.pontos ? "Lívia +" + (liviaScore.pontos - camilaScore.pontos) : "Camila +" + (camilaScore.pontos - liviaScore.pontos);
+  const hasResult = game.resultado && Number.isFinite(game.resultado.placarCasa) && Number.isFinite(game.resultado.placarFora);
+  const duel = !hasResult ? "Aguardando resultado" : liviaScore.pontos === camilaScore.pontos ? "Mesma pontuação" : liviaScore.pontos > camilaScore.pontos ? "Lívia +" + (liviaScore.pontos - camilaScore.pontos) : "Camila +" + (camilaScore.pontos - liviaScore.pontos);
 
   return `
     <article class="gameCard">
@@ -184,7 +258,10 @@ function gameCard(game) {
 
 function dashboard(calculated) {
   const [livia, camila] = calculated.ranking;
-  const round = currentRound(calculated.rounds);
+  const activeDate = selectedDate(calculated.rounds);
+  const dayRounds = roundsForDate(calculated.rounds, activeDate);
+  const dayGames = gamesForDate(calculated.rounds, activeDate);
+  const roundLabel = dayRounds.map((round) => round.rodada).join(" + ");
   return `
     <section class="shell">
       <header class="topBar">
@@ -197,6 +274,7 @@ function dashboard(calculated) {
         <nav>
           <button id="importBtn">Importar JSON</button>
           <button id="refreshBtn">Atualizar agora</button>
+          <button id="allGamesBtn">Todos os jogos</button>
           <button id="printBtn" class="primary">Modo Print</button>
         </nav>
       </header>
@@ -210,7 +288,7 @@ function dashboard(calculated) {
       <section class="summary">
         <span>Líder atual: <b>${calculated.lider}</b></span>
         <span>Diferença: <b>${calculated.diferenca} ponto${calculated.diferenca === 1 ? "" : "s"}</b></span>
-        <span>Rodada: <b>${round?.rodada || "Nenhuma rodada importada"}</b></span>
+        <span>Dia: <b>${activeDate ? moneyDate(activeDate) : "Nenhuma rodada importada"}</b></span>
         <span>API: <b>${state.apiStatus}</b></span>
         <span>Nuvem: <b>${state.syncStatus || "Nuvem não configurada"}</b></span>
       </section>
@@ -238,10 +316,66 @@ function dashboard(calculated) {
 
       <section class="roundSection">
         <div class="sectionTitle">
-          <h2>${round ? round.rodada : "Importe uma rodada para começar"}</h2>
-          <p>${round ? moneyDate(round.data) : "Use o botão Importar JSON e cole o texto do JSON."}</p>
+          <h2>${activeDate ? "Jogos do dia" : "Importe uma rodada para começar"}</h2>
+          <p>${activeDate ? `${moneyDate(activeDate)} - ${roundLabel}` : "Use o botão Importar JSON e cole o texto do JSON."}</p>
         </div>
-        <div class="gameGrid">${round ? round.jogos.map(gameCard).join("") : ""}</div>
+        ${datePager(calculated.rounds, activeDate)}
+        <div class="gameGrid">${dayGames.length ? dayGames.map(gameCard).join("") : `<article class="emptyState">Nenhum jogo importado para ${moneyDate(activeDate)}.</article>`}</div>
+      </section>
+    </section>
+  `;
+}
+
+function allGamesPage(calculated) {
+  const [livia, camila] = calculated.ranking;
+  const activeRound = selectedRoundName(calculated.rounds);
+  const games = gamesForRound(calculated.rounds, activeRound);
+  return `
+    <section class="shell">
+      <header class="topBar">
+        <div class="brand">
+          ${appLogo()}
+          <div><h1>Todos os jogos</h1></div>
+        </div>
+        <nav>
+          <button id="homeBtn">Principal</button>
+          <button id="importBtn">Importar JSON</button>
+          <button id="refreshBtn">Atualizar agora</button>
+          <button id="printBtn" class="primary">Modo Print</button>
+        </nav>
+      </header>
+
+      <section class="summary">
+        <span>Lívia: <b>${livia.pontos} pts</b></span>
+        <span>Camila: <b>${camila.pontos} pts</b></span>
+        <span>Filtro: <b>${activeRound || "Nenhuma rodada"}</b></span>
+        <span>API: <b>${state.apiStatus}</b></span>
+        <span>Nuvem: <b>${state.syncStatus || "Nuvem não configurada"}</b></span>
+      </section>
+
+      ${state.showImport ? `
+        <section class="importPanel">
+          <div class="sectionTitle">
+            <h2>Colar JSON</h2>
+            <p>Cole o texto gerado pelo ChatGPT e importe a rodada.</p>
+          </div>
+          <textarea id="jsonInput" spellcheck="false" placeholder='{"rodada":"Oitavas de Final","data":"2026-06-30","jogos":[...]}' >${escapeHtml(state.importText)}</textarea>
+          <div class="importActions">
+            <button id="confirmImportBtn" class="primary">Importar texto</button>
+            <button id="cancelImportBtn">Cancelar</button>
+          </div>
+        </section>
+      ` : ""}
+
+      ${state.errors.length ? `<aside class="errors">${state.errors.map((error) => `<p>${error}</p>`).join("")}</aside>` : ""}
+
+      <section class="roundSection">
+        <div class="sectionTitle">
+          <h2>${activeRound || "Rodadas"}</h2>
+          <p>${games.length} jogo${games.length === 1 ? "" : "s"}</p>
+        </div>
+        ${roundTabs(calculated.rounds, activeRound)}
+        <div class="gameGrid">${games.length ? games.map(gameCard).join("") : ""}</div>
       </section>
     </section>
   `;
@@ -249,7 +383,10 @@ function dashboard(calculated) {
 
 function printMode(calculated) {
   const [livia, camila] = calculated.ranking;
-  const round = currentRound(calculated.rounds);
+  const activeDate = selectedDate(calculated.rounds);
+  const dayRounds = roundsForDate(calculated.rounds, activeDate);
+  const dayGames = gamesForDate(calculated.rounds, activeDate);
+  const roundLabel = dayRounds.map((round) => round.rodada).join(" + ");
   return `
     <section class="printPage">
       <div class="printBrand">
@@ -260,8 +397,8 @@ function printMode(calculated) {
         </div>
       </div>
       <div class="printMeta">
-        <span>${round?.rodada || "Rodada"}</span>
-        <span>${moneyDate(round?.data) || new Intl.DateTimeFormat("pt-BR").format(new Date())}</span>
+        <span>${roundLabel || "Rodada"}</span>
+        <span>${moneyDate(activeDate) || new Intl.DateTimeFormat("pt-BR").format(new Date())}</span>
       </div>
       <div class="printDuel">
         <div>${participantIcon("Lívia")}<b>${livia.pontos}</b><span>Lívia</span></div>
@@ -269,7 +406,7 @@ function printMode(calculated) {
         <div>${participantIcon("Camila")}<b>${camila.pontos}</b><span>Camila</span></div>
       </div>
       <p class="leader">Líder atual: <b>${calculated.lider}</b> ${calculated.diferenca ? `por ${calculated.diferenca} ponto${calculated.diferenca === 1 ? "" : "s"}` : ""}</p>
-      <div class="printGames">${round ? round.jogos.map(gameCard).join("") : "<p>Importe uma rodada para gerar o print.</p>"}</div>
+      <div class="printGames">${dayGames.length ? dayGames.map(gameCard).join("") : "<p>Importe uma rodada para gerar o print.</p>"}</div>
       <div class="printTotals">
         <span>Lívia: ${livia.placaresExatos} exatos, ${livia.vencedoresAcertados} vencedores</span>
         <span>Camila: ${camila.placaresExatos} exatos, ${camila.vencedoresAcertados} vencedores</span>
@@ -280,7 +417,7 @@ function printMode(calculated) {
 
 function render() {
   const calculated = calculateTournament(state.rounds);
-  app.innerHTML = state.view === "print" ? printMode(calculated) : dashboard(calculated);
+  app.innerHTML = state.view === "print" ? printMode(calculated) : state.view === "all" ? allGamesPage(calculated) : dashboard(calculated);
   bindEvents(calculated);
 }
 
@@ -288,6 +425,18 @@ function bindEvents(calculated) {
   document.querySelector("#printBtn")?.addEventListener("click", () => {
     state.view = "print";
     location.hash = "print";
+    render();
+  });
+
+  document.querySelector("#allGamesBtn")?.addEventListener("click", () => {
+    state.view = "all";
+    location.hash = "todos";
+    render();
+  });
+
+  document.querySelector("#homeBtn")?.addEventListener("click", () => {
+    state.view = "dashboard";
+    location.hash = "";
     render();
   });
 
@@ -329,6 +478,20 @@ function bindEvents(calculated) {
 
   document.querySelector("#refreshBtn")?.addEventListener("click", refreshResults);
 
+  document.querySelectorAll(".dateNav").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedDate = button.dataset.date || "";
+      render();
+    });
+  });
+
+  document.querySelectorAll(".roundFilter").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedRound = button.dataset.round || "";
+      render();
+    });
+  });
+
   if (!calculated.rounds.length) {
     document.addEventListener("keydown", seedExample, { once: true });
   }
@@ -354,7 +517,7 @@ async function seedExample(event) {
 }
 
 window.addEventListener("hashchange", () => {
-  state.view = location.hash === "#print" ? "print" : "dashboard";
+  state.view = viewFromHash();
   render();
 });
 

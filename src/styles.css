@@ -79,7 +79,12 @@ nav button:nth-child(2) {
   color: var(--ink);
 }
 
-nav button:nth-child(3),
+nav button:nth-child(3) {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+nav button:nth-child(4),
 button.primary {
   background: var(--green);
   color: var(--surface);
@@ -403,6 +408,72 @@ nav {
 
 .roundSection {
   margin-top: 34px;
+}
+
+.filterTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.filterTabs button {
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--ink);
+  font-size: 0.78rem;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.filterTabs button.active {
+  background: var(--yellow);
+  transform: rotate(-1deg);
+}
+
+.datePager {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto 1fr auto;
+  margin-top: 18px;
+}
+
+.datePager strong {
+  background: var(--surface);
+  border: var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+  font-family: var(--display);
+  padding: 12px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.datePager button {
+  aspect-ratio: 1;
+  background: var(--yellow);
+  font-size: 2rem;
+  line-height: 1;
+  min-height: 54px;
+  padding: 8px;
+  width: 54px;
+}
+
+.datePager button:disabled {
+  cursor: default;
+  opacity: 0.35;
+  transform: none;
+}
+
+.emptyState {
+  background: var(--surface);
+  border: var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+  color: var(--muted);
+  font-family: var(--mono);
+  padding: 22px;
 }
 
 .sectionTitle {
