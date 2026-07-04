@@ -18,11 +18,13 @@ function persistedState() {
   return {
     rounds: state.rounds,
     lastUpdatedAt: state.lastUpdatedAt,
+    updatedAt: state.updatedAt,
     apiStatus: state.apiStatus
   };
 }
 
 async function persistState() {
+  state.updatedAt = new Date().toISOString();
   saveState(persistedState());
 
   if (!isSupabaseConfigured()) {
@@ -46,7 +48,19 @@ async function loadCloudState() {
   const result = await loadRemoteState();
 
   if (result.ok && result.data) {
-    Object.assign(state, result.data, { syncStatus: result.message });
+    const remoteState = result.data;
+    const localTime = Date.parse(state.updatedAt || state.lastUpdatedAt || 0);
+    const remoteTime = Date.parse(remoteState.updatedAt || remoteState.remoteUpdatedAt || remoteState.lastUpdatedAt || 0);
+
+    if (localTime > remoteTime) {
+      state.syncStatus = "Navegador tinha dados mais novos. Salvando na nuvem...";
+      render();
+      await persistState();
+      return;
+    }
+
+    const { remoteUpdatedAt, ...cleanRemoteState } = remoteState;
+    Object.assign(state, cleanRemoteState, { updatedAt: cleanRemoteState.updatedAt || remoteUpdatedAt || null, syncStatus: result.message });
     saveState(persistedState());
     render();
     return;

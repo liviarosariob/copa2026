@@ -25,7 +25,7 @@ export async function loadRemoteState() {
     if (!response.ok) return { ok: false, data: null, message: `Supabase erro ${response.status}` };
     const rows = await response.json();
     if (!rows.length) return { ok: true, data: null, message: "Nuvem vazia" };
-    return { ok: true, data: rows[0].data, message: "Carregado da nuvem" };
+    return { ok: true, data: { ...rows[0].data, remoteUpdatedAt: rows[0].updated_at }, message: "Carregado da nuvem" };
   } catch {
     return { ok: false, data: null, message: "Falha ao carregar da nuvem" };
   }
