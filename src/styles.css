@@ -277,7 +277,8 @@ nav button:hover {
 .printTotals {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr) auto auto;
+  align-items: stretch;
 }
 
 .summary span,
@@ -291,6 +292,53 @@ nav button:hover {
   color: var(--muted);
   font-family: var(--mono);
   padding: 14px;
+}
+
+.summary .miniStatus {
+  align-items: center;
+  aspect-ratio: 1;
+  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--surface);
+  display: inline-grid;
+  justify-items: center;
+  min-height: 54px;
+  padding: 6px;
+  position: relative;
+  width: 58px;
+}
+
+.miniStatus.ok {
+  background: var(--green);
+}
+
+.miniStatus.error {
+  background: var(--red);
+}
+
+.miniStatus b {
+  color: var(--surface);
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.miniStatus em {
+  align-items: center;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  bottom: -8px;
+  color: var(--ink);
+  display: grid;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  font-style: normal;
+  height: 22px;
+  line-height: 1;
+  place-items: center;
+  position: absolute;
+  right: -8px;
+  width: 22px;
 }
 
 .importPanel {

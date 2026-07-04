@@ -219,6 +219,23 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+function isOkStatus(value) {
+  const text = String(value || "").toLocaleLowerCase("pt-BR");
+  return ["salvo", "carregado", "encontrou", "mantendo", "mais novos"].some((item) => text.includes(item));
+}
+
+function compactStatus(kind, value) {
+  const ok = isOkStatus(value);
+  const mainIcon = kind === "cloud" ? "☁" : "●";
+  const label = kind === "cloud" ? "Nuvem" : "API";
+  return `
+    <span class="miniStatus ${ok ? "ok" : "error"}" title="${label}: ${escapeHtml(value || "Sem status")}" aria-label="${label}: ${escapeHtml(value || "Sem status")}">
+      <b>${mainIcon}</b>
+      <em>${ok ? "✓" : "×"}</em>
+    </span>
+  `;
+}
+
 function rankingCard(person, other) {
   const diff = person.pontos - other.pontos;
   return `
@@ -312,8 +329,8 @@ function dashboard(calculated) {
         <span>Líder atual: <b>${calculated.lider}</b></span>
         <span>Diferença: <b>${calculated.diferenca} ponto${calculated.diferenca === 1 ? "" : "s"}</b></span>
         <span>Dia: <b>${activeDate ? moneyDate(activeDate) : "Nenhuma rodada importada"}</b></span>
-        <span>API: <b>${state.apiStatus}</b></span>
-        <span>Nuvem: <b>${state.syncStatus || "Nuvem não configurada"}</b></span>
+        ${compactStatus("api", state.apiStatus)}
+        ${compactStatus("cloud", state.syncStatus || "Nuvem não configurada")}
       </section>
 
       ${state.showImport ? `
@@ -372,8 +389,8 @@ function allGamesPage(calculated) {
         <span>Lívia: <b>${livia.pontos} pts</b></span>
         <span>Camila: <b>${camila.pontos} pts</b></span>
         <span>Filtro: <b>${activeRound || "Nenhuma rodada"}</b></span>
-        <span>API: <b>${state.apiStatus}</b></span>
-        <span>Nuvem: <b>${state.syncStatus || "Nuvem não configurada"}</b></span>
+        ${compactStatus("api", state.apiStatus)}
+        ${compactStatus("cloud", state.syncStatus || "Nuvem não configurada")}
       </section>
 
       ${state.showImport ? `
