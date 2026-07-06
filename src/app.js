@@ -1,12 +1,13 @@
 import { calculateTournament } from "./services/scoringService.js";
-import { importRound } from "./services/importExportService.js";
+import { importRound, migrateRounds } from "./services/importExportService.js";
 import { loadState, saveState } from "./services/storageService.js";
 import { isSupabaseConfigured, loadRemoteState, saveRemoteState } from "./services/supabaseService.js";
 import { updateResults } from "./services/footballResultsService.js";
 import { findCountry } from "./services/countries.js";
 
 const app = document.querySelector("#app");
-const state = { ...loadState(), view: viewFromHash(), errors: [], showImport: false, importText: "", selectedDate: "", selectedRound: "" };
+const loadedState = loadState();
+const state = { ...loadedState, rounds: migrateRounds(loadedState.rounds), view: viewFromHash(), errors: [], showImport: false, importText: "", selectedDate: "", selectedRound: "" };
 
 function viewFromHash() {
   if (location.hash === "#print") return "print";
@@ -16,7 +17,7 @@ function viewFromHash() {
 
 function persistedState() {
   return {
-    rounds: state.rounds,
+    rounds: migrateRounds(state.rounds),
     lastUpdatedAt: state.lastUpdatedAt,
     updatedAt: state.updatedAt,
     apiStatus: state.apiStatus
@@ -25,6 +26,7 @@ function persistedState() {
 
 async function persistState() {
   state.updatedAt = new Date().toISOString();
+  state.rounds = migrateRounds(state.rounds);
   saveState(persistedState());
 
   if (!isSupabaseConfigured()) {
@@ -60,7 +62,7 @@ async function loadCloudState() {
     }
 
     const { remoteUpdatedAt, ...cleanRemoteState } = remoteState;
-    Object.assign(state, cleanRemoteState, { updatedAt: cleanRemoteState.updatedAt || remoteUpdatedAt || null, syncStatus: result.message });
+    Object.assign(state, cleanRemoteState, { rounds: migrateRounds(cleanRemoteState.rounds), updatedAt: cleanRemoteState.updatedAt || remoteUpdatedAt || null, syncStatus: result.message });
     saveState(persistedState());
     render();
     return;
@@ -112,11 +114,17 @@ function todayIso() {
 }
 
 function sortedRounds(rounds) {
-  return [...rounds].sort((a, b) => `${a.data || ""}-${a.rodada || ""}`.localeCompare(`${b.data || ""}-${b.rodada || ""}`));
+  return migrateRounds(rounds);
+}
+
+function sortedGames(rounds) {
+  return sortedRounds(rounds)
+    .flatMap((round) => (round.jogos || []).map((game) => ({ ...game, rodada: round.rodada })))
+    .sort((a, b) => `${a.data || ""}-${a.horario || ""}-${a.id || ""}`.localeCompare(`${b.data || ""}-${b.horario || ""}-${b.id || ""}`));
 }
 
 function uniqueDates(rounds) {
-  return [...new Set(sortedRounds(rounds).map((round) => round.data).filter(Boolean))];
+  return [...new Set(sortedGames(rounds).map((game) => game.data).filter(Boolean))];
 }
 
 function availableDates(rounds) {
@@ -140,18 +148,34 @@ function selectedRoundName(rounds) {
   return names[0];
 }
 
-function roundsForDate(rounds, date) {
-  return sortedRounds(rounds).filter((round) => round.data === date);
-}
-
 function gamesForDate(rounds, date) {
-  return roundsForDate(rounds, date).flatMap((round) => round.jogos.map((game) => ({ ...game, rodada: round.rodada, data: round.data })));
+  return sortedGames(rounds).filter((game) => game.data === date);
 }
 
 function gamesForRound(rounds, roundName) {
-  return sortedRounds(rounds)
-    .filter((round) => round.rodada === roundName)
-    .flatMap((round) => round.jogos.map((game) => ({ ...game, rodada: round.rodada, data: round.data })));
+  return sortedGames(rounds).filter((game) => game.rodada === roundName);
+}
+
+function groupGamesByDate(games) {
+  return [...games.reduce((groups, game) => {
+    const date = game.data || "";
+    groups.set(date, [...(groups.get(date) || []), game]);
+    return groups;
+  }, new Map())].sort(([dateA], [dateB]) => dateA.localeCompare(dateB));
+}
+
+function groupedGames(games) {
+  if (!games.length) return "";
+  return `
+    <div class="dateGroups">
+      ${groupGamesByDate(games).map(([date, items]) => `
+        <section class="dateGroup">
+          <h3>${moneyDate(date)}</h3>
+          <div class="gameGrid">${items.map(gameCard).join("")}</div>
+        </section>
+      `).join("")}
+    </div>
+  `;
 }
 
 function datePager(rounds, activeDate) {
@@ -299,9 +323,8 @@ function gameCard(game) {
 function dashboard(calculated) {
   const [livia, camila] = calculated.ranking;
   const activeDate = selectedDate(calculated.rounds);
-  const dayRounds = roundsForDate(calculated.rounds, activeDate);
   const dayGames = gamesForDate(calculated.rounds, activeDate);
-  const roundLabel = dayRounds.map((round) => round.rodada).join(" + ");
+  const roundLabel = [...new Set(dayGames.map((game) => game.rodada).filter(Boolean))].join(" + ");
   return `
     <section class="shell">
       <header class="topBar">
@@ -339,7 +362,7 @@ function dashboard(calculated) {
             <h2>Colar JSON</h2>
             <p>Cole o texto gerado pelo ChatGPT e importe a rodada.</p>
           </div>
-          <textarea id="jsonInput" spellcheck="false" placeholder='{"rodada":"Oitavas de Final","data":"2026-06-30","jogos":[...]}' >${escapeHtml(state.importText)}</textarea>
+          <textarea id="jsonInput" spellcheck="false" placeholder='{"rodada":"Oitavas de Final","jogos":[{"data":"2026-07-06", ...}]}' >${escapeHtml(state.importText)}</textarea>
           <div class="importActions">
             <button id="confirmImportBtn" class="primary">Importar texto</button>
             <button id="cancelImportBtn">Cancelar</button>
@@ -399,7 +422,7 @@ function allGamesPage(calculated) {
             <h2>Colar JSON</h2>
             <p>Cole o texto gerado pelo ChatGPT e importe a rodada.</p>
           </div>
-          <textarea id="jsonInput" spellcheck="false" placeholder='{"rodada":"Oitavas de Final","data":"2026-06-30","jogos":[...]}' >${escapeHtml(state.importText)}</textarea>
+          <textarea id="jsonInput" spellcheck="false" placeholder='{"rodada":"Oitavas de Final","jogos":[{"data":"2026-07-06", ...}]}' >${escapeHtml(state.importText)}</textarea>
           <div class="importActions">
             <button id="confirmImportBtn" class="primary">Importar texto</button>
             <button id="cancelImportBtn">Cancelar</button>
@@ -415,7 +438,7 @@ function allGamesPage(calculated) {
           <p>${games.length} jogo${games.length === 1 ? "" : "s"}</p>
         </div>
         ${roundTabs(calculated.rounds, activeRound)}
-        <div class="gameGrid">${games.length ? games.map(gameCard).join("") : ""}</div>
+        ${groupedGames(games)}
       </section>
     </section>
   `;
@@ -424,9 +447,8 @@ function allGamesPage(calculated) {
 function printMode(calculated) {
   const [livia, camila] = calculated.ranking;
   const activeDate = selectedDate(calculated.rounds);
-  const dayRounds = roundsForDate(calculated.rounds, activeDate);
   const dayGames = gamesForDate(calculated.rounds, activeDate);
-  const roundLabel = dayRounds.map((round) => round.rodada).join(" + ");
+  const roundLabel = [...new Set(dayGames.map((game) => game.rodada).filter(Boolean))].join(" + ");
   return `
     <section class="printPage">
       <div class="printBrand">

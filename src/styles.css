@@ -477,6 +477,24 @@ nav button:hover {
   margin-top: 34px;
 }
 
+.dateGroups {
+  display: grid;
+  gap: 26px;
+  margin-top: 22px;
+}
+
+.dateGroup h3 {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  line-height: 1;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.dateGroup .gameGrid {
+  margin-top: 14px;
+}
+
 .filterTabs {
   display: flex;
   flex-wrap: wrap;

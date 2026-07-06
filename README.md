@@ -47,10 +47,10 @@ O app aceita JSON neste formato:
 ```json
 {
   "rodada": "16 avos de final",
-  "data": "2026-06-30",
   "jogos": [
     {
       "id": "CIV-NOR-2026-06-30",
+      "data": "2026-06-30",
       "timeCasa": "Costa do Marfim",
       "timeFora": "Noruega",
       "horario": "14:00",
@@ -131,7 +131,7 @@ O serviço fica em:
 src/services/footballResultsService.js
 ```
 
-Quando você clica em **Atualizar agora**, o app busca os jogos nas datas das rodadas importadas.
+Quando você clica em **Atualizar agora**, o app busca os jogos nas datas informadas em cada jogo importado.
 
 ## Armazenamento
 
@@ -197,10 +197,10 @@ values (
     "rounds": [
       {
         "rodada": "16 avos de final",
-        "data": "2026-06-30",
         "jogos": [
           {
             "id": "CIV-NOR-2026-06-30",
+            "data": "2026-06-30",
             "timeCasa": "Costa do Marfim",
             "timeFora": "Noruega",
             "siglaCasa": "CIV",
@@ -230,6 +230,7 @@ values (
           },
           {
             "id": "FRA-SWE-2026-06-30",
+            "data": "2026-06-30",
             "timeCasa": "França",
             "timeFora": "Suécia",
             "siglaCasa": "FRA",
@@ -255,6 +256,7 @@ values (
           },
           {
             "id": "MEX-ECU-2026-06-30",
+            "data": "2026-06-30",
             "timeCasa": "México",
             "timeFora": "Equador",
             "siglaCasa": "MEX",

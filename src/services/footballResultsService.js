@@ -11,7 +11,7 @@ function normalizeTeam(value) {
 }
 
 function uniqueDates(rounds) {
-  return [...new Set((rounds || []).map((round) => round.data).filter(Boolean))];
+  return [...new Set((rounds || []).flatMap((round) => (round.jogos || []).map((game) => game.data)).filter(Boolean))];
 }
 
 function espnDate(value) {

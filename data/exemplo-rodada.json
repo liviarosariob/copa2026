@@ -1,9 +1,9 @@
 {
   "rodada": "Oitavas de Final",
-  "data": "2026-06-30",
   "jogos": [
     {
       "id": "CIV-NOR-2026-06-30",
+      "data": "2026-06-30",
       "timeCasa": "Costa do Marfim",
       "timeFora": "Noruega",
       "siglaCasa": "CIV",
@@ -35,6 +35,7 @@
     },
     {
       "id": "FRA-SWE-2026-06-30",
+      "data": "2026-06-30",
       "timeCasa": "França",
       "timeFora": "Suécia",
       "siglaCasa": "FRA",
