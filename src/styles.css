@@ -619,6 +619,16 @@ nav button:hover {
   white-space: nowrap;
 }
 
+.matchup > strong small {
+  color: var(--ink);
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  line-height: 1.25;
+  margin-top: 6px;
+  white-space: normal;
+}
+
 .matchup div {
   display: grid;
   gap: 4px;

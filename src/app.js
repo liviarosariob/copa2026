@@ -205,7 +205,17 @@ function roundTabs(rounds, activeRound) {
 function scoreLine(game) {
   const result = game.resultado;
   if (!gameHasStarted(game) || !result || !Number.isFinite(result.placarCasa) || !Number.isFinite(result.placarFora)) return "x";
-  return `${result.placarCasa} x ${result.placarFora}`;
+  const officialHome = Number.isFinite(result.placarOficialCasa) ? result.placarOficialCasa : result.placarCasa;
+  const officialAway = Number.isFinite(result.placarOficialFora) ? result.placarOficialFora : result.placarFora;
+  const hasDifferentRegularScore = officialHome !== result.placarCasa || officialAway !== result.placarFora;
+  const classified = result.classificado || result.ganhador || result.vencedor || result.penaltis;
+  const regular = hasDifferentRegularScore
+    ? `<small>${result.placarCasa === result.placarFora ? "empate no tempo regulamentar" : "tempo regulamentar"}: ${result.placarCasa} x ${result.placarFora}</small>`
+    : "";
+  const decision = classified && game.mataMata && result.placarCasa === result.placarFora
+    ? `<small>${result.decisao || "decisão"}: ${classified}</small>`
+    : "";
+  return `${officialHome} x ${officialAway}${regular}${decision}`;
 }
 
 function gameHasStarted(game) {
@@ -214,8 +224,9 @@ function gameHasStarted(game) {
 
 function guessLine(guess) {
   if (!guess) return "-";
-  const penalties = guess.penaltis ? `<small>pênaltis: ${guess.penaltis}</small>` : "";
-  return `<strong>${guess.placarCasa} x ${guess.placarFora}</strong>${penalties}`;
+  const classified = guess.classificado || guess.ganhador || guess.vencedor || guess.penaltis;
+  const decision = classified ? `<small>classificado: ${classified}</small>` : "";
+  return `<strong>${guess.placarCasa} x ${guess.placarFora}</strong>${decision}`;
 }
 
 function statusClass(status) {

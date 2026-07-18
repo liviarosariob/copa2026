@@ -63,20 +63,60 @@ function statusFromEspn(status) {
   return "agendado";
 }
 
+function numericScore(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function scoreFromLinescores(competitor) {
+  const linescores = competitor?.linescores;
+  if (!Array.isArray(linescores) || linescores.length < 2) return null;
+  const firstHalf = numericScore(linescores[0]?.value ?? linescores[0]?.displayValue);
+  const secondHalf = numericScore(linescores[1]?.value ?? linescores[1]?.displayValue);
+  if (firstHalf === null || secondHalf === null) return null;
+  return firstHalf + secondHalf;
+}
+
+function regularTimeScore(game, localHome, localAway, fallbackHome, fallbackAway) {
+  if (!game.mataMata) return { placarCasa: fallbackHome, placarFora: fallbackAway };
+  const regularHome = scoreFromLinescores(localHome);
+  const regularAway = scoreFromLinescores(localAway);
+  if (regularHome === null || regularAway === null) return { placarCasa: fallbackHome, placarFora: fallbackAway };
+  return { placarCasa: regularHome, placarFora: regularAway };
+}
+
+function decisionMethod(placarCasa, placarFora, finalScoreCasa, finalScoreFora) {
+  if (finalScoreCasa !== placarCasa || finalScoreFora !== placarFora) return "prorrogação";
+  return "pênaltis";
+}
+
 function mapEventToGame(game, event, swapped) {
   const competition = event.competitions?.[0];
   const apiHome = competitorByHomeAway(competition, "home");
   const apiAway = competitorByHomeAway(competition, "away");
   const localHome = swapped ? apiAway : apiHome;
   const localAway = swapped ? apiHome : apiAway;
-  const placarCasa = Number(localHome?.score);
-  const placarFora = Number(localAway?.score);
+  const finalScoreCasa = Number(localHome?.score);
+  const finalScoreFora = Number(localAway?.score);
   const status = statusFromEspn(competition?.status);
+  const regularScore = regularTimeScore(game, localHome, localAway, finalScoreCasa, finalScoreFora);
+  const placarCasa = regularScore.placarCasa;
+  const placarFora = regularScore.placarFora;
+  let classificado = game.resultado?.classificado || game.resultado?.ganhador || game.resultado?.vencedor || game.resultado?.penaltis || null;
+  let decisao = game.resultado?.decisao || null;
   let penaltis = game.resultado?.penaltis || null;
 
-  if (Number.isFinite(placarCasa) && Number.isFinite(placarFora) && placarCasa === placarFora) {
-    if (localHome?.winner) penaltis = game.timeCasa;
-    if (localAway?.winner) penaltis = game.timeFora;
+  if (game.mataMata && Number.isFinite(placarCasa) && Number.isFinite(placarFora)) {
+    if (placarCasa === placarFora) {
+      if (localHome?.winner) classificado = game.timeCasa;
+      if (localAway?.winner) classificado = game.timeFora;
+      if (classificado) decisao = decisionMethod(placarCasa, placarFora, finalScoreCasa, finalScoreFora);
+      penaltis = decisao === "pênaltis" ? classificado : null;
+    } else {
+      classificado = null;
+      decisao = null;
+      penaltis = null;
+    }
   }
 
   return {
@@ -86,7 +126,11 @@ function mapEventToGame(game, event, swapped) {
       ? {
           placarCasa,
           placarFora,
+          placarOficialCasa: finalScoreCasa,
+          placarOficialFora: finalScoreFora,
           penaltis,
+          classificado,
+          decisao,
           atualizadoEm: new Date().toISOString(),
           fonte: "espn"
         }

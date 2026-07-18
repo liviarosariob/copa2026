@@ -93,13 +93,14 @@ Se a ESPN não encontrar um jogo, você pode importar o resultado manualmente no
 
 ```json
 "resultado": {
-  "placarCasa": 1,
+  "placarCasa": 2,
   "placarFora": 2,
-  "penaltis": null
+  "classificado": "Bélgica",
+  "decisao": "prorrogação"
 }
 ```
 
-Em mata-mata, `penaltis` deve ser o país classificado nos pênaltis. Se o jogo não foi para pênaltis, use `null`.
+Em mata-mata, se o jogo empatar no tempo regulamentar, o placar deve ser o do tempo normal. Informe em `classificado` quem passou depois da prorrogação ou dos pênaltis. Use `decisao` para deixar claro se foi `"prorrogação"` ou `"pênaltis"`.
 
 ## Pontuação
 
@@ -109,7 +110,8 @@ Em mata-mata, `penaltis` deve ser o país classificado nos pênaltis. Se o jogo 
 Em mata-mata:
 
 - o placar exato é o placar do tempo normal;
-- se terminar empatado e houver pênaltis, o campo `penaltis` define quem passou.
+- se terminar empatado e for para prorrogação ou pênaltis, quem acertou o classificado/ganhador ganha o `+1`;
+- a ESPN pode trazer detalhes por tempo; quando vier, o app usa só os 2 tempos regulamentares para o placar exato.
 
 A lógica fica em:
 

@@ -18,14 +18,18 @@ function normalized(value) {
   return String(value || "").trim().toLocaleLowerCase("pt-BR");
 }
 
+function declaredWinner(resultLike) {
+  return normalized(resultLike.penaltis || resultLike.classificado || resultLike.ganhador || resultLike.vencedor);
+}
+
 function qualifiedTeam(game, resultLike) {
   const scoreSide = sideFromScore(resultLike.placarCasa, resultLike.placarFora);
   if (!game.mataMata || scoreSide !== "empate") return scoreSide;
-  const penalties = normalized(resultLike.penaltis || resultLike.classificado);
-  if (!penalties) return "";
-  if (penalties === normalized(game.timeCasa) || penalties === normalized(game.siglaCasa)) return "casa";
-  if (penalties === normalized(game.timeFora) || penalties === normalized(game.siglaFora)) return "fora";
-  return penalties;
+  const winner = declaredWinner(resultLike);
+  if (!winner) return "";
+  if (winner === normalized(game.timeCasa) || winner === normalized(game.siglaCasa)) return "casa";
+  if (winner === normalized(game.timeFora) || winner === normalized(game.siglaFora)) return "fora";
+  return winner;
 }
 
 export function calculateScore(game, result, palpite) {
