@@ -25,6 +25,13 @@ function persistedState() {
 }
 
 async function persistState() {
+  if (!state.rounds.length) {
+    state.syncStatus = "Proteção ativada: nenhum dado vazio foi enviado à nuvem.";
+    saveState(persistedState());
+    render();
+    return { ok: false, message: state.syncStatus };
+  }
+
   state.updatedAt = new Date().toISOString();
   state.rounds = migrateRounds(state.rounds);
   saveState(persistedState());
@@ -32,7 +39,7 @@ async function persistState() {
   if (!isSupabaseConfigured()) {
     state.syncStatus = "Supabase não configurado";
     saveState(persistedState());
-    return;
+    return { ok: false, message: state.syncStatus };
   }
 
   state.syncStatus = "Salvando na nuvem...";
@@ -41,6 +48,7 @@ async function persistState() {
   state.syncStatus = result.message;
   saveState(persistedState());
   render();
+  return result;
 }
 
 async function loadCloudState() {
@@ -571,6 +579,13 @@ function bindEvents(calculated) {
 }
 
 async function refreshResults() {
+  if (!state.rounds.length) {
+    state.apiStatus = "Importe uma rodada antes de atualizar os resultados.";
+    state.syncStatus = "Nada foi alterado na nuvem.";
+    render();
+    return;
+  }
+
   const result = await updateResults(state.rounds);
   state.rounds = result.rounds;
   state.apiStatus = result.status;
@@ -594,7 +609,10 @@ window.addEventListener("hashchange", () => {
   render();
 });
 
-window.addEventListener("online", refreshResults);
+window.addEventListener("online", () => {
+  if (state.rounds.length) refreshResults();
+  else loadCloudState();
+});
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
