@@ -59,6 +59,17 @@ async function loadCloudState() {
 
   if (result.ok && result.data) {
     const remoteState = result.data;
+    const localRounds = migrateRounds(state.rounds);
+    const remoteRounds = migrateRounds(remoteState.rounds);
+
+    if (localRounds.length && !remoteRounds.length) {
+      state.rounds = localRounds;
+      state.syncStatus = "Nuvem vazia encontrada. Restaurando a cópia deste navegador...";
+      render();
+      await persistState();
+      return;
+    }
+
     const localTime = Date.parse(state.updatedAt || state.lastUpdatedAt || 0);
     const remoteTime = Date.parse(remoteState.updatedAt || remoteState.remoteUpdatedAt || remoteState.lastUpdatedAt || 0);
 
